@@ -10,6 +10,8 @@ Recent advances in data-centric deep generative models have led to significant p
 ## UGoDIT Illustrative Diagram:
 ![Alt text](uGro_DIT_BD_03.png)
 
+## Results:
+![Alt text](aSeqDIP_visuals.png)
 
 
 
