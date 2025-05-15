@@ -61,7 +61,7 @@ def load_yaml(file_path: str) -> dict:
     return config
 
 
-task_config= '/home/shijunliang/SDF_data/diffusion-posterior-sampling-main/configs/super_resolution_config.yaml'
+task_config= '/configs/super_resolution_config.yaml'
 
 
 task_config = load_yaml(task_config)
