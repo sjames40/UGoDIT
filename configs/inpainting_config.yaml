@@ -1,0 +1,24 @@
+conditioning:
+  method: ps
+  params:
+    scale: 1.5 #0.5 it depend on the image range
+
+data:
+  name: ffhq
+  #root: ./data/demo_RIP/
+  #root: ./data/libraray_image/
+  root: ./data/demo_ip/
+measurement:
+  operator:
+    name: inpainting
+  mask_opt:
+    mask_type: random
+    #mask_len_range: !!python/tuple [128, 129]  # for box
+    #mask_len_range: !!python/tuple [101, 102]  # for box
+    mask_prob_range: !!python/tuple [0.7, 0.71]  # for random
+    #image_size: 320
+    image_size: 256
+
+  noise:
+    name: gaussian
+    sigma: 0.05
