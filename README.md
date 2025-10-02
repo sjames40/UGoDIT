@@ -1,4 +1,4 @@
-# UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights Demos
+# UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights
 
 ## NeurIPS 2025
 
@@ -27,7 +27,7 @@ Setup the [DPS](https://github.com/DPS2022/diffusion-posterior-sampling) code fo
 ```bibtex
 @inproceedings{liangNeuIPS25,
 author    = {Linag, Shijun and Alkhouri, Ismail and Gautam, Siddhant and Qu, Qing and Ravishankar, Saiprasad },
-  title     = {UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights Demos},
+  title     = {UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights},
   booktitle   = {Advances in neural information processing systems (NeurIPS)},
   year      = {2025}
 }
