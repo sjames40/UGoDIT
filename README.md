@@ -1,6 +1,6 @@
 # UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights Demos
 
-## NeurIPS 2024
+## NeurIPS 2025
 
 **Authors**: Shijun Liang*, Ismail R. Alkhouri*, Siddhant Gautam, Qing Qu, and Saiprasad Ravishankar. 
 
