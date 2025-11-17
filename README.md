@@ -25,7 +25,7 @@ Setup the [DPS](https://github.com/DPS2022/diffusion-posterior-sampling) code fo
 
 ### To cite our paper, use the following: 
 ```bibtex
-@inproceedings{liangNeuIPS25,
+@inproceedings{liangNeuRIPS25,
 author    = {Linag, Shijun and Alkhouri, Ismail and Gautam, Siddhant and Qu, Qing and Ravishankar, Saiprasad },
   title     = {UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights},
   booktitle   = {Advances in neural information processing systems (NeurIPS)},
