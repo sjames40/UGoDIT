@@ -16,12 +16,15 @@ Recent advances in data-centric deep generative models have led to significant p
 ![Alt text](uGODit_visualizations_02.png)
 
 
+### For image restoration: 
+Setup the [DPS](https://github.com/DPS2022/diffusion-posterior-sampling) code for the forward models. 
+
+To change the number of decoders during training, change num_decoders in UGoDIT/models/init.py. 
 
 ### For MRI: 
 Download the [fastMRI](https://github.com/microsoft/fastmri-plus/tree/main) dataset. 
 
-### For image restoration: 
-Setup the [DPS](https://github.com/DPS2022/diffusion-posterior-sampling) code for the forward models. 
+
 
 ### To cite our paper, use the following: 
 ```bibtex
