@@ -48,173 +48,131 @@ def compare_psnr(img1, img2):
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
 from torchvision import transforms
 def load_yaml(file_path: str) -> dict:
     with open(file_path) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     return config
 
-
-task_config= '/configs/super_resolution_config.yaml'
-
-
+task_config= './configs/super_resolution_config.yaml'
 task_config = load_yaml(task_config)
 measure_config = task_config['measurement']
 operator = get_operator(device=device, **measure_config['operator'])
 
 num_layers = 2
-
 imsize = -1
 dim_div_by = 64
 
+# M=4 training images
 fnames  = ['00013', '00016', '00019', '00018']
-roots   = ['ffhq/'] * len(fnames)   # or a list of different dirs
+roots   = ['ffhq/'] * len(fnames)
+M = len(fnames)  
 
-# 2) load + preprocess each into a (C,H,W) np array → tensor
+# load and preprocess each into a (C,H,W) np array → tensor
 tensors = []
 for root, name in zip(roots, fnames):
     path = os.path.join(root, f"{name}.png")
-    img_pil, _ = get_image(path, imsize)        # loads PIL + np
+    img_pil, _ = get_image(path, imsize)
     img_pil    = crop_image(img_pil, dim_div_by)
-    img_np     = pil_to_np(img_pil)             # (C,H,W), floats in [0,1]
-    t = torch.tensor(img_np)                    # → (C,H,W)
+    img_np     = pil_to_np(img_pil)
+    t = torch.tensor(img_np)
     tensors.append(t)
 
-# 3) stack into a batch: shape (N, C, H, W)
+# Stack into a batch: shape (M, C, H, W)
 batch = torch.stack(tensors, dim=0).to(device)
-print("batch shape:", batch.shape)  # should be (5, 3, H, W) or (5,1,H,W) depending on your channels
+print("batch shape:", batch.shape)
 
-blurred_batch = operator.forward(batch)        # → (5, C, H, W)
+# Generate degraded images
+blurred_batch = operator.forward(batch)
 blurred_batch = torch.clamp(blurred_batch, 0, 1)
-
-# 5) if you need back in numpy for plotting:
-blurred_np = blurred_batch.cpu().detach().numpy()  # (5, C, H, W)
-
-# ### Hyper-parameters
 
 exp_weight = 0.99
 input_depth = 3
 output_depth = 3
 INPUT = 'noise'
 show_every = 500
-
-## Loss
-mse = torch.nn.MSELoss().type(dtype)
-
-
-def init_weights(net, init_type='normal', init_gain=0.02):
-    def init_func(m):  # define the initialization function
-        classname = m.__class__.__name__
-        if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-            if init_type == 'normal':
-                init.normal_(m.weight.data, 0.0, init_gain)
-            elif init_type == 'xavier':
-                init.xavier_normal_(m.weight.data, gain=init_gain)
-            elif init_type == 'kaiming':
-                init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
-            elif init_type == 'orthogonal':
-                init.orthogonal_(m.weight.data, gain=init_gain)
-            else:
-                raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
-            if hasattr(m, 'bias') and m.bias is not None:
-                init.constant_(m.bias.data, 0.0)
-        elif classname.find('BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
-            init.normal_(m.weight.data, 1.0, init_gain)
-            init.constant_(m.bias.data, 0.0)
-
-    print('initialize network with %s' % init_type)
-
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
 pad = 'reflection'
-#pad = 'nearest'
-OPT_OVER = 'net'
 learning_rate = LR = 0.01
-exp_weight = 0.99
-input_depth = 3
-output_depth = 3
-INPUT = 'noise'
+lambda_reg = 2.0 
 
+# initialize network with M decoders
 net = get_net(input_depth, 'skip_shared', pad,
             skip_n33d=128, 
             skip_n33u=128,
             skip_n11=4,
             num_scales=5,
-            upsample_mode='bilinear').type(dtype)
+            upsample_mode='bilinear'
+            ).type(dtype)  #num_decoders=M
 
-num_epochs = 500
-# learning_rate = 4e-4
-show_every = 50
+optimizer = optim.Adam(net.parameters(), lr=learning_rate)
 
+# g the target shape from the original clean batch
+target_shape = batch.shape[2:] 
 
-optimizer = optim.Adam(net.parameters(), lr = learning_rate)
+# initialize network inputs (z_i) with upsampled degraded images
+upsampled_blurred_batch = F.interpolate(blurred_batch, size=target_shape, mode='bilinear', align_corners=False)
+net_inputs = [upsampled_blurred_batch[i:i+1] for i in range(M)]  # list of individual inputs
 
+print("Training UGoDIT...")
+print(f"Number of training images (M): {M}")
+print(f"Input shape for each image: {net_inputs[0].shape}")
+print(f"Target shape: {target_shape}")
 
-noise_list = [
-    get_noise(input_depth, INPUT, img_np.shape[1:]).squeeze(0).type(dtype)
-    for _ in range(4)
-]
-
-noise_batch = torch.stack(noise_list, dim=0)
-img_var = torch.tensor(img_np).unsqueeze(0).to(device)
-
-
-
-
-INPUT = 'noise'
-pad = 'reflection'
-OPT_OVER = 'net' # optimize over the net parameters only
-reg_noise_std = 1./3.
-learning_rate = LR = 0.01
-exp_weight=0.99
-input_depth = 3 
-roll_back = True # to prevent numerical issues
-num_iter = 5000 # max iterations
-burnin_iter = 7000 # burn-in iteration for SGLD
-weight_decay = 5e-8
-show_every =  10
-
-
-net_input =noise_batch
-
-
+K = 2000 
+N = 10    # num of gradient updates per input update
 
 losses = []
-psnrs = []
-avg_psnrs = []
+iteration = 0
 
-exp_weight = .99
-out_avg = torch.zeros_like(torch.abs(img_var)).to(device)
-for epoch in range(2000):
-
-    for _ in range(10):
-
+for k in range(K):  # input updates
+    if (iteration % 100 == 0):
+        print(f"Iteration {iteration}, Input update {k}/{K}")
+    
+    # gradient updates
+    for n in range(N):
         optimizer.zero_grad()
-        net_out_before = torch.stack([
-        out for out in net(net_input)
-        ], dim=0).squeeze(0)
-        net_output_combine = torch.stack([
-        operator.forward(out).squeeze(0) for out in net(net_input)
-        ], dim=0).squeeze(0)
-        loss = F.mse_loss(net_output_combine, blurred_batch) +1* F.mse_loss(net_input, net_out_before )
-        + 1e-6 * TV(net_output_combine)
-        loss.backward()
-
+        
+        # forward pass through shared encoder
+        encoded, skips = net.encoder(torch.cat(net_inputs, dim=0))
+        
+        # process each image through its corresponding decoder
+        total_loss = 0
+        net_outputs = []
+        
+        for i in range(M):
+            # get features for image i
+            encoded_i = encoded[i:i+1]
+            skips_i = [skip[i:i+1] if skip is not None else None for skip in skips]
+            
+            # pass through decoder i
+            output_i = net.decoders[i](encoded_i, skips_i)
+            net_outputs.append(output_i)
+            
+            output_downsampled = operator.forward(output_i)
+            loss_measurement = F.mse_loss(output_downsampled, blurred_batch[i:i+1])
+            
+            loss_autoencoding = F.mse_loss(output_i, net_inputs[i])
+            
+            loss_i = loss_measurement + lambda_reg * loss_autoencoding
+            total_loss += loss_i
+        
+        # Backward pass
+        total_loss.backward()
         optimizer.step()
+        
+        if n == 0 and k % 100 == 0:
+            losses.append(total_loss.item())
+            print(f"  Loss: {total_loss.item():.6f}")
+    
+    with torch.no_grad():
+        for i in range(M):
+            # pass current input through encoder and decoder i
+            encoded, skips = net.encoder(net_inputs[i])
+            net_inputs[i] = net.decoders[i](encoded, skips).detach()
+    
+    iteration += 1
 
-    net_input = net_out_before.detach()
-
-
+# save only the shared encoder weights
 encoder_sd = net.encoder.state_dict()
-
-# 2. Write them to disk
-torch.save(encoder_sd, "encoder_weights_sr_4_image.pth")
-
-
-
-
-
-
+torch.save(encoder_sd, "encoder_weights_sr_4_image_multidecoder.pth")
+print("Training complete. Encoder weights saved.")
