@@ -61,7 +61,7 @@ def load_yaml(file_path: str) -> dict:
     return config
 
 
-task_config= '/configs/super_resolution_config.yaml'
+task_config= './configs/super_resolution_config.yaml'
 
 
 task_config = load_yaml(task_config)
@@ -69,7 +69,7 @@ measure_config = task_config['measurement']
 operator = get_operator(device=device, **measure_config['operator'])
 
 
-ffname = '00001'
+ffname = '00002'
 data_root = 'ffhq/'
 img_path = data_root + ffname + '.png'
 num_layers = 2
@@ -149,7 +149,7 @@ net = get_net(input_depth, 'skip_shared', pad,
             num_scales=5,
             upsample_mode='bilinear').type(dtype)
 
-encoder_weights = torch.load('encoder_weights_sr.pth', map_location=device)
+encoder_weights = torch.load('encoder_weights_sr_4_image.pth', map_location=device)
 net.encoder.load_state_dict(encoder_weights)
 init_decoder_weights(net, init_type='normal', init_gain=0.02)
 
@@ -158,10 +158,7 @@ num_epochs = 500
 show_every = 50
 
 
-# In[13]:
-
-
-optimizer = optim.Adam(net.parameters(), lr = learning_rate)
+optimizer = optim.Adam(net.decoders.parameters(), lr = learning_rate) # KEEP DECODER FROZEN DURING INFERENCE
 
 
 
@@ -184,10 +181,24 @@ show_every =  10
 
 
 
-net_input =get_noise(input_depth, INPUT, img_np.shape[1:]).type(dtype)
+#net_input =get_noise(input_depth, INPUT, img_np.shape[1:]).type(dtype)
 
+# get the target shape from the original high-resolution image tensor
+target_shape = image_tensor.shape[2:] # This will be (H, W), e.g., (256, 256)
 
-# In[19]:
+# upsample the low-resolution degraded image to the target shape
+upsampled_blurred_tensor = F.interpolate(blurred_image_tensor, size=target_shape, mode='bilinear', align_corners=False)
+
+# set the network input 'z' to this upsampled tensor
+net_input = upsampled_blurred_tensor.detach()
+
+# shape check 
+print("--- Shape Check for Initialization ---")
+print(f"Ground Truth Shape:       {image_tensor.shape}")
+print(f"Degraded Image Shape (y): {blurred_image_tensor.shape}")
+print(f"Initialized Input Shape (z): {net_input.shape}")
+print("------------------------------------")
+
 
 
 losses = []
@@ -195,28 +206,76 @@ psnrs = []
 avg_psnrs = []
 out = []
 exp_weight = .99
-out_avg = torch.zeros_like(torch.abs(img_var)).to(device)
+out_avg = torch.zeros(img_np.shape).to(device)  # [3, H, W]
+
+print(f"Input image shape: {img_np.shape}")
+print(f"Target PSNR improvement from low-res to high-res reconstruction")
 
 for epoch in range(2000):
-
+    
     for _ in range(10):
-
         optimizer.zero_grad()
-
+        
         net_output = net(net_input)
-
+        
         pred_proj = operator.forward(net_output[0])
-
-        loss = F.mse_loss(pred_proj, blurred_image_tensor) +0.1* F.mse_loss(net_input, net_output[0])
-        + 1e-6 * TV(net_output[0])
+        
+        loss = (F.mse_loss(pred_proj, blurred_image_tensor) + 
+                2 * F.mse_loss(net_input, net_output[0]))
+        
         loss.backward()
-
         optimizer.step()
-
+    
     net_input = net_output[0].detach()
+    
+    with torch.no_grad():
+        out_np = net_output[0].cpu().numpy()[0]
+        out_np = np.clip(out_np, 0, 1)
+        
+        psnr = compare_psnr(img_np, out_np)
+        psnrs.append(psnr)
+        
+        # exponential moving average
+        out_tensor = torch.tensor(out_np).to(device)
+        out_avg = out_avg * exp_weight + out_tensor * (1 - exp_weight)
+        
+        # avg PSNR
+        out_avg_np = out_avg.cpu().numpy()
+        avg_psnr = compare_psnr(img_np, out_avg_np)
+        avg_psnrs.append(avg_psnr)
+        
+        losses.append(loss.item())
+    
+    if epoch % show_every == 0:
+        print(f"Epoch {epoch:4d} | Loss: {loss.item():.6f} | PSNR: {psnr:.2f} dB | Avg PSNR: {avg_psnr:.2f} dB")
+        
+        plt.figure(figsize=(15, 5))
+        
+        plt.subplot(141)
+        plt.imshow(img_np.transpose(1, 2, 0))
+        plt.title('Ground Truth')
+        plt.axis('off')
+        
+        plt.subplot(142)
+        plt.imshow(img_mask_np.transpose(1, 2, 0))
+        plt.title('Low Resolution Input')
+        plt.axis('off')
+        
+        plt.subplot(143)
+        plt.imshow(out_np.transpose(1, 2, 0))
+        plt.title(f'Current Output\nPSNR: {psnr:.2f} dB')
+        plt.axis('off')
+        
+        plt.subplot(144)
+        plt.imshow(out_avg_np.transpose(1, 2, 0))
+        plt.title(f'Sliding Average\nPSNR: {avg_psnr:.2f} dB')
+        plt.axis('off')
+        
+        plt.tight_layout()
+        plt.savefig(f'progress_epoch_{epoch}.png')
+        plt.show()
 
-
-
-
-
-
+# save psnrs as np array
+psnrs_npy = np.array(psnrs)
+np.save('psnrs.npy', psnrs)
+print(f"Saved PSNRS array of this run with shape {psnrs_npy.shape}")
