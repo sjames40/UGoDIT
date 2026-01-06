@@ -4,8 +4,6 @@ import matplotlib.cm as cm
 import os
 import sys
 import cv2
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import warnings
 warnings.filterwarnings("ignore")
 import numpy as np
@@ -20,8 +18,7 @@ torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark =True
 dtype = torch.cuda.FloatTensor
 import torch.optim as optim
-from tqdm.notebook import tqdm
-from models import *
+from tqdm import tqdm
 from torchmetrics.functional import total_variation as TV
 import scipy
 from guided_diffusion.measurements import get_operator
@@ -101,8 +98,13 @@ net = get_net(input_depth, 'skip_shared', pad,
             skip_n33u=128,
             skip_n11=4,
             num_scales=5,
-            upsample_mode='bilinear'
+            upsample_mode='bilinear',
+            num_decoders=M
             ).type(dtype)  #num_decoders=M
+
+print("M =", M)
+print("type(net.decoders) =", type(net.decoders))
+print("len(net.decoders) =", len(net.decoders))
 
 optimizer = optim.Adam(net.parameters(), lr=learning_rate)
 
