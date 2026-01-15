@@ -5,7 +5,6 @@ import os
 import sys
 import cv2
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import warnings
 warnings.filterwarnings("ignore")
 import numpy as np
@@ -18,15 +17,15 @@ from utils.denoising_utils import *
 import _pickle as cPickle
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark =True
-dtype = torch.cuda.FloatTensor
 import torch.optim as optim
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from models import *
 from torchmetrics.functional import total_variation as TV
 import scipy
 from guided_diffusion.measurements import get_operator
 import yaml
 from torch.nn import init
+from torchvision import transforms
 
 def np_plot(np_matrix, title, opt = 'RGB'):
     plt.figure(2)
@@ -49,12 +48,8 @@ def compare_psnr(img1, img2):
     #psnr = 10*math.log10(float(1.**2)/MSE)
     return psnr
 
+device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-
-from torchvision import transforms
 def load_yaml(file_path: str) -> dict:
     with open(file_path) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -102,7 +97,7 @@ INPUT = 'noise'
 show_every = 500
 
 ## Loss
-mse = torch.nn.MSELoss().type(dtype)
+mse = torch.nn.MSELoss().to(device)
 
 
 def init_decoder_weights(net, init_type='normal', init_gain=0.02):
@@ -129,9 +124,6 @@ def init_decoder_weights(net, init_type='normal', init_gain=0.02):
     net.decoders.apply(init_func)
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
 pad = 'reflection'
 
 OPT_OVER = 'net'
@@ -147,9 +139,9 @@ net = get_net(input_depth, 'skip_shared', pad,
             skip_n33u=128,
             skip_n11=4,
             num_scales=5,
-            upsample_mode='bilinear').type(dtype)
+            upsample_mode='bilinear').to(device)
 
-encoder_weights = torch.load('encoder_weights_sr_4_image.pth', map_location=device)
+encoder_weights = torch.load('encoder_weights_sr_4_image_multidecoder.pth', map_location=device)
 net.encoder.load_state_dict(encoder_weights)
 init_decoder_weights(net, init_type='normal', init_gain=0.02)
 
