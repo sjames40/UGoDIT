@@ -67,7 +67,7 @@ jupyter notebook UGoDIT_shared_encoder_MRI.ipynb
 ### To cite our paper, use the following: 
 ```bibtex
 @inproceedings{liangNeuRIPS25,
-  author    = {Linag, Shijun and Alkhouri, Ismail and Gautam, Siddhant and Qu, Qing and Ravishankar, Saiprasad },
+  author    = {Liang, Shijun and Alkhouri, Ismail and Gautam, Siddhant and Qu, Qing and Ravishankar, Saiprasad },
   title     = {UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights},
   booktitle   = {Advances in neural information processing systems (NeurIPS)},
   year      = {2025}
