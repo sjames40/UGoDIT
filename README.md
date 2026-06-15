@@ -13,7 +13,7 @@ Repository with code to reproduce the results for **UGoDIT** in our paper:
 
 **NeurIPS 2025**
 
-Paper link: [NeurIPS 2025 virtual poster](https://neurips.cc/virtual/2025/loc/san-diego/poster/116478)
+Paper link: [NeurIPS 2025](https://neurips.cc/virtual/2025/loc/san-diego/poster/116478)
 
 **arXiv preprint**
 
