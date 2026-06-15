@@ -11,10 +11,6 @@ Repository with code to reproduce the results for **UGoDIT** in our paper:
 
 **Authors**: Shijun Liang*, Ismail R. Alkhouri*, Siddhant Gautam, Qing Qu, and Saiprasad Ravishankar.
 
----
-
-## Paper
-
 **NeurIPS 2025**
 
 Paper link: [NeurIPS 2025 virtual poster](https://neurips.cc/virtual/2025/loc/san-diego/poster/116478)
