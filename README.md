@@ -1,10 +1,27 @@
 # UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights
 
-## NeurIPS 2025
+[![NeurIPS](https://img.shields.io/badge/NeurIPS-2025-blue.svg)](https://neurips.cc/virtual/2025/loc/san-diego/poster/116478)
+[![arXiv](https://img.shields.io/badge/arXiv-2505.11720-b31b1b.svg)](https://arxiv.org/pdf/2505.11720)
 
-**Authors**: Shijun Liang*, Ismail R. Alkhouri*, Siddhant Gautam, Qing Qu, and Saiprasad Ravishankar. 
+Repository with code to reproduce the results for **UGoDIT** in our paper:
 
-**Paper page**: [NeurIPS 2025 virtual poster](https://neurips.cc/virtual/2025/loc/san-diego/poster/116478)
+### UGoDIT: Unsupervised Group Deep Image Prior Via Transferable Weights
+
+**NeurIPS 2025**
+
+**Authors**: Shijun Liang*, Ismail R. Alkhouri*, Siddhant Gautam, Qing Qu, and Saiprasad Ravishankar.
+
+---
+
+## Paper
+
+**NeurIPS 2025**
+
+Paper link: [NeurIPS 2025 virtual poster](https://neurips.cc/virtual/2025/loc/san-diego/poster/116478)
+
+**arXiv preprint**
+
+Paper link: [arXiv:2505.11720](https://arxiv.org/pdf/2505.11720)
 
 ### Abstract: 
 
